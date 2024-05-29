@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "./interfaces/IApeCoinStaking.sol";
 import "./interfaces/core/IFactory.sol";
 import "./interfaces/core/IWalletApeCoin.sol";
 
@@ -28,11 +27,10 @@ contract DamVault is ERC4626, Ownable, Pausable {
     event UpdatedLockEndTime(uint8 lockYear, uint256 endTime);
 
     uint256 private constant YEAR = 365 * 86400;
-    IApeCoinStaking private constant apeCoinStaking = IApeCoinStaking(0x5954aB967Bc958940b7EB73ee84797Dc8a2AFbb9);
 
-    IFactory private walletFactory = IFactory(0x0165878A594ca255338adfa4d48449f69242Eb8F);
-    IMessenger private messenger = IMessenger(0x5D4472f31Bd9385709ec61305AFc749F0fA8e9d0);
-    address public dam = address(0x5D4472f31Bd9385709ec61305AFc749F0fA8e9d0); // TODO have to setup after deployment
+    IFactory private constant walletFactory = IFactory(0xed567F1D7BC0fc08cc0967139C0545e73cA4587D);
+    IMessenger private constant messenger = IMessenger(0x5D4472f31Bd9385709ec61305AFc749F0fA8e9d0);
+    address public constant dam = address(0); // TODO configure after deployment
     uint32 public minGasLimitOnBlastBridge = 200000;
     uint256 private _totalSupply;
     uint256 private _numberOfStakeholders;
@@ -41,15 +39,8 @@ contract DamVault is ERC4626, Ownable, Pausable {
 
     mapping(uint8 => uint256) public lockEndTime;
 
-    constructor(
-        ERC20 _asset,
-        address _factory,
-        address _messenger,
-        address _dam
-    ) ERC4626(_asset) ERC20("vAPE", "vAPE") Ownable() {
-        walletFactory = IFactory(_factory);
-        messenger = IMessenger(_messenger);
-        dam = _dam;
+    constructor(ERC20 _asset, address _owner) ERC4626(_asset) ERC20("dAPE", "dAPE") Ownable() {
+        _transferOwnership(_owner);
     }
 
     function depositWithLock(uint256 assets, address receiver, uint8 lockYear) external whenNotPaused returns (uint256) {
@@ -62,6 +53,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
 
         uint256 shares = previewDeposit(assets);
         _deposit(msg.sender, receiver, assets, shares);
+        _lockAmount[receiver][lockYear] += shares;
         _sendMessageDeposit(msg.sender, assets, lockYear);
         return shares;
     }
@@ -73,7 +65,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
 
         uint256 shares = previewDeposit(assets);
         _deposit(msg.sender, receiver, assets, shares);
-        _lockAmount[receiver][0] = _lockAmount[receiver][0] + shares;
+        _lockAmount[receiver][0] += shares;
         _sendMessageDeposit(msg.sender, assets, 0);
         return shares;
     }
