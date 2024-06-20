@@ -30,7 +30,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
 
     IFactory private constant walletFactory = IFactory(0xed567F1D7BC0fc08cc0967139C0545e73cA4587D);
     IMessenger private constant messenger = IMessenger(0x5D4472f31Bd9385709ec61305AFc749F0fA8e9d0);
-    address public constant dam = address(0); // TODO configure after deployment
+    address public constant dam = 0x6CF72C8F32b10872DEaC522c2e952F7AefD36d2F;
     uint32 public minGasLimitOnBlastBridge = 200000;
     uint256 private _totalSupply;
     uint256 private _numberOfStakeholders;
@@ -43,7 +43,11 @@ contract DamVault is ERC4626, Ownable, Pausable {
         _transferOwnership(_owner);
     }
 
-    function depositWithLock(uint256 assets, address receiver, uint8 lockYear) external whenNotPaused returns (uint256) {
+    function depositWithLock(
+        uint256 assets,
+        address receiver,
+        uint8 lockYear
+    ) external whenNotPaused returns (uint256) {
         address senderCyanWallet = walletFactory.getOrDeployWallet(msg.sender);
         require(senderCyanWallet == receiver, "Receiver should be cyan wallet");
         require(lockYear <= 5, "DamVault: invalid lock year");
@@ -58,7 +62,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
         return shares;
     }
 
-    function deposit(uint256 assets, address receiver) public whenNotPaused override returns (uint256) {
+    function deposit(uint256 assets, address receiver) public override whenNotPaused returns (uint256) {
         address senderCyanWallet = walletFactory.getOrDeployWallet(msg.sender);
         require(senderCyanWallet == receiver, "Receiver should be cyan wallet");
         require(assets <= maxDeposit(receiver), "ERC4626: deposit more than max");
@@ -202,11 +206,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
     }
 
     function _sendMessageDeposit(address addr, uint256 amount, uint8 lockYear) private {
-        messenger.sendMessage(
-            dam,
-            abi.encodeCall(IDam.deposit, (addr, amount, lockYear)),
-            minGasLimitOnBlastBridge
-        );
+        messenger.sendMessage(dam, abi.encodeCall(IDam.deposit, (addr, amount, lockYear)), minGasLimitOnBlastBridge);
     }
 
     function _sendMessageWithdraw(address addr, uint256 amount) private {
