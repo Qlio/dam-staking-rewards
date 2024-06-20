@@ -84,7 +84,6 @@ contract DamVault is ERC4626, Ownable, Pausable {
         if (senderCyanWallet == msg.sender) revert SenderNotMainWallet();
         if (senderCyanWallet != receiver) revert ReceiverNotCyanWallet();
         if (msg.sender != owner) revert SenderNotOwner();
-        if (assets > maxWithdraw(receiver)) revert NotEnoughAsset();
 
         uint256 shares = previewWithdraw(assets);
         _withdraw(msg.sender, receiver, owner, assets, shares);
@@ -167,6 +166,8 @@ contract DamVault is ERC4626, Ownable, Pausable {
         uint256 shares
     ) internal override {
         _updateLockInfo(receiver);
+        if (_totalSupply < assets) revert NotEnoughAsset();
+        if (_lockAmount[receiver][0] < shares) revert NotEnoughAsset();
         unchecked{_totalSupply = _totalSupply - assets;}
         unchecked{_lockAmount[receiver][0] = _lockAmount[receiver][0] - shares;}
         IWalletApeCoin wallet = IWalletApeCoin(receiver);
