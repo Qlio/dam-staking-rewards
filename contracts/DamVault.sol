@@ -51,8 +51,9 @@ contract DamVault is ERC4626, Ownable, Pausable {
         address senderCyanWallet = walletFactory.getOrDeployWallet(msg.sender);
         require(senderCyanWallet == receiver, "Receiver should be cyan wallet");
         require(lockYear <= 5, "DamVault: invalid lock year");
-        require(lockYear > 0, "DamVault: invalid lock year");
-        require(block.timestamp < lockEndTime[lockYear], "DamVault: lock year has ended");
+        if (lockYear > 0) {
+            require(block.timestamp < lockEndTime[lockYear], "DamVault: lock year has ended");
+        }
         require(assets <= maxDeposit(receiver), "ERC4626: deposit more than max");
 
         uint256 shares = previewDeposit(assets);
@@ -63,15 +64,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
     }
 
     function deposit(uint256 assets, address receiver) public override whenNotPaused returns (uint256) {
-        address senderCyanWallet = walletFactory.getOrDeployWallet(msg.sender);
-        require(senderCyanWallet == receiver, "Receiver should be cyan wallet");
-        require(assets <= maxDeposit(receiver), "ERC4626: deposit more than max");
-
-        uint256 shares = previewDeposit(assets);
-        _deposit(msg.sender, receiver, assets, shares);
-        _lockAmount[receiver][0] += shares;
-        _sendMessageDeposit(msg.sender, assets, 0);
-        return shares;
+        revert("Deprecated");
     }
 
     function mint(uint256 shares, address receiver) public override returns (uint256) {
