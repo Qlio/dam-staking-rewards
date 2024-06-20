@@ -19,6 +19,12 @@ struct DetailedBalance {
 }
 
 error NotEnoughApeCoin();
+error InvalidLockYear();
+error Deprecated();
+error ReceiverNotCyanWallet();
+error SenderNotMainWallet();
+error NotEnoughAsset();
+error SenderNotOwner();
 
 contract DamVault is ERC4626, Ownable, Pausable {
     using SafeCast for uint256;
@@ -49,12 +55,14 @@ contract DamVault is ERC4626, Ownable, Pausable {
         uint8 lockYear
     ) external whenNotPaused returns (uint256) {
         address senderCyanWallet = walletFactory.getOrDeployWallet(msg.sender);
-        require(senderCyanWallet == receiver, "Receiver should be cyan wallet");
-        require(lockYear <= 5, "DamVault: invalid lock year");
-        if (lockYear > 0) {
-            require(block.timestamp < lockEndTime[lockYear], "DamVault: lock year has ended");
+        if (senderCyanWallet != receiver) revert ReceiverNotCyanWallet();
+        if (lockYear > 5) {
+            revert InvalidLockYear();
         }
-        require(assets <= maxDeposit(receiver), "ERC4626: deposit more than max");
+        if (lockYear > 0 && block.timestamp > lockEndTime[lockYear]) {
+            revert InvalidLockYear();
+        }
+        if (assets > maxDeposit(receiver)) revert NotEnoughAsset();
 
         uint256 shares = previewDeposit(assets);
         _deposit(msg.sender, receiver, assets, shares);
@@ -64,19 +72,19 @@ contract DamVault is ERC4626, Ownable, Pausable {
     }
 
     function deposit(uint256 assets, address receiver) public override whenNotPaused returns (uint256) {
-        revert("Deprecated");
+        revert Deprecated();
     }
 
     function mint(uint256 shares, address receiver) public override returns (uint256) {
-        revert("Deprecated");
+        revert Deprecated();
     }
 
     function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
         address senderCyanWallet = walletFactory.getOrDeployWallet(msg.sender);
-        require(senderCyanWallet != msg.sender, "Sender should be main wallet");
-        require(senderCyanWallet == receiver, "Receiver should be cyan wallet");
-        require(msg.sender == owner, "Sender should be owner");
-        require(assets <= maxWithdraw(receiver), "ERC4626: withdraw more than max");
+        if (senderCyanWallet == msg.sender) revert SenderNotMainWallet();
+        if (senderCyanWallet != receiver) revert ReceiverNotCyanWallet();
+        if (msg.sender != owner) revert SenderNotOwner();
+        if (assets > maxWithdraw(receiver)) revert NotEnoughAsset();
 
         uint256 shares = previewWithdraw(assets);
         _withdraw(msg.sender, receiver, owner, assets, shares);
@@ -85,7 +93,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
     }
 
     function redeem(uint256 shares, address receiver, address owner) public override returns (uint256) {
-        revert("Deprecated");
+        revert Deprecated();
     }
 
     function totalBalance(address account) public view returns (uint256) {
@@ -214,8 +222,8 @@ contract DamVault is ERC4626, Ownable, Pausable {
 
     function setLockEndTime(uint8 lockYear, uint256 endTime) external onlyOwner {
         uint256 currentEndTime = lockEndTime[lockYear];
-        if (currentEndTime != 0) {
-            require(currentEndTime > endTime, "DamVault: only decrease lock time is allowed");
+        if (currentEndTime != 0 && endTime >= currentEndTime) {
+            revert InvalidLockYear();
         }
         lockEndTime[lockYear] = endTime;
         emit UpdatedLockEndTime(lockYear, endTime);
