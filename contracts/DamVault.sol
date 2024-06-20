@@ -65,6 +65,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
         if (assets > maxDeposit(receiver)) revert NotEnoughAsset();
 
         uint256 shares = previewDeposit(assets);
+        _updateLockInfo(receiver);
         _deposit(msg.sender, receiver, assets, shares);
         unchecked{_lockAmount[receiver][lockYear] += shares;}
         _sendMessageDeposit(msg.sender, assets, lockYear);
@@ -96,14 +97,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
     }
 
     function totalBalance(address account) public view returns (uint256) {
-        unchecked{return
-            _lockAmount[account][0] +
-            _lockAmount[account][1] +
-            _lockAmount[account][2] +
-            _lockAmount[account][3] +
-            _lockAmount[account][4] +
-            _lockAmount[account][5];
-        }
+        return _totalBalance(account);
     }
 
     function maxWithdraw(address owner) public view override returns (uint256) {
@@ -143,11 +137,10 @@ contract DamVault is ERC4626, Ownable, Pausable {
     }
 
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
-        _updateLockInfo(receiver);
         unchecked{_totalSupply = _totalSupply + assets;}
         SafeERC20.safeTransferFrom(ERC20(asset()), caller, receiver, assets);
         IWalletApeCoin wallet = IWalletApeCoin(receiver);
-        if (totalBalance(receiver) == 0) {
+        if (_totalBalance(receiver) == 0) {
             wallet.executeModule(
                 abi.encodeWithSelector(IWalletApeCoin.depositApeCoinAndCreateDamLock.selector, assets)
             );
@@ -197,6 +190,17 @@ contract DamVault is ERC4626, Ownable, Pausable {
             }
         }
         return balance;
+    }
+
+    function _totalBalance(address account) private view returns (uint256) {
+        unchecked{return
+        _lockAmount[account][0] +
+        _lockAmount[account][1] +
+        _lockAmount[account][2] +
+        _lockAmount[account][3] +
+        _lockAmount[account][4] +
+        _lockAmount[account][5];
+        }
     }
 
     function _updateLockInfo(address addr) private {
