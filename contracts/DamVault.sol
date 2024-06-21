@@ -65,7 +65,9 @@ contract DamVault is ERC4626, Ownable, Pausable {
         if (assets > maxDeposit(receiver)) revert NotEnoughAsset();
 
         uint256 shares = previewDeposit(assets);
-        unchecked{_lockAmount[receiver][lockYear] += shares;}
+        unchecked {
+            _lockAmount[receiver][lockYear] += shares;
+        }
         _deposit(msg.sender, receiver, assets, shares);
         _sendMessageDeposit(msg.sender, assets, lockYear);
         return shares;
@@ -121,7 +123,9 @@ contract DamVault is ERC4626, Ownable, Pausable {
         for (uint8 i = 1; i <= 5; ++i) {
             LockedBalance memory lock = LockedBalance({ amount: _lockAmount[addr][i], end: lockEndTime[i] });
             if (lock.end < block.timestamp) {
-                unchecked{balance = balance + lock.amount;}
+                unchecked {
+                    balance = balance + lock.amount;
+                }
                 locks[i] = LockedBalance({ amount: 0, end: 0 });
             } else {
                 locks[i] = lock;
@@ -137,14 +141,18 @@ contract DamVault is ERC4626, Ownable, Pausable {
 
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         _updateLockInfo(receiver);
-        unchecked{_totalSupply = _totalSupply + assets;}
+        unchecked {
+            _totalSupply = _totalSupply + assets;
+        }
         SafeERC20.safeTransferFrom(ERC20(asset()), caller, receiver, assets);
         IWalletApeCoin wallet = IWalletApeCoin(receiver);
         if (_totalBalance(receiver) == shares) {
             wallet.executeModule(
                 abi.encodeWithSelector(IWalletApeCoin.depositApeCoinAndCreateDamLock.selector, assets)
             );
-            unchecked{_numberOfStakeholders += 1;}
+            unchecked {
+                _numberOfStakeholders += 1;
+            }
         } else {
             wallet.executeModule(abi.encodeWithSelector(IWalletApeCoin.increaseApeCoinStakeOnDamLock.selector, assets));
         }
@@ -161,14 +169,20 @@ contract DamVault is ERC4626, Ownable, Pausable {
         _updateLockInfo(receiver);
         if (_totalSupply < assets) revert NotEnoughAsset();
         if (_lockAmount[receiver][0] < shares) revert NotEnoughAsset();
-        unchecked{_totalSupply = _totalSupply - assets;}
-        unchecked{_lockAmount[receiver][0] = _lockAmount[receiver][0] - shares;}
+        unchecked {
+            _totalSupply = _totalSupply - assets;
+        }
+        unchecked {
+            _lockAmount[receiver][0] = _lockAmount[receiver][0] - shares;
+        }
         IWalletApeCoin wallet = IWalletApeCoin(receiver);
         wallet.executeModule(abi.encodeWithSelector(IWalletApeCoin.withdrawApeCoinAndRemoveDamLock.selector, assets));
         if (totalBalance(receiver) > 0) {
             wallet.executeModule(abi.encodeWithSelector(IWalletApeCoin.createDamLock.selector));
         } else {
-            unchecked{_numberOfStakeholders -= 1;}
+            unchecked {
+                _numberOfStakeholders -= 1;
+            }
         }
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
@@ -186,27 +200,32 @@ contract DamVault is ERC4626, Ownable, Pausable {
         for (uint8 i = 1; i <= 5; ++i) {
             uint256 lockedBalance = _lockAmount[addr][i];
             if (lockEndTime[i] < block.timestamp) {
-                unchecked{balance = balance + lockedBalance;}
+                unchecked {
+                    balance = balance + lockedBalance;
+                }
             }
         }
         return balance;
     }
 
     function _totalBalance(address account) private view returns (uint256) {
-        unchecked{return
-        _lockAmount[account][0] +
-        _lockAmount[account][1] +
-        _lockAmount[account][2] +
-        _lockAmount[account][3] +
-        _lockAmount[account][4] +
-        _lockAmount[account][5];
+        unchecked {
+            return
+                _lockAmount[account][0] +
+                _lockAmount[account][1] +
+                _lockAmount[account][2] +
+                _lockAmount[account][3] +
+                _lockAmount[account][4] +
+                _lockAmount[account][5];
         }
     }
 
     function _updateLockInfo(address addr) private {
         for (uint8 i = 1; i <= 5; ++i) {
             if (lockEndTime[i] < block.timestamp) {
-                unchecked{_lockAmount[addr][0] = _lockAmount[addr][0] + _lockAmount[addr][i];}
+                unchecked {
+                    _lockAmount[addr][0] = _lockAmount[addr][0] + _lockAmount[addr][i];
+                }
                 _lockAmount[addr][i] = 0;
             }
         }
