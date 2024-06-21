@@ -30,7 +30,7 @@ contract DamVault is ERC4626, Ownable, Pausable {
 
     IFactory private constant walletFactory = IFactory(0xed567F1D7BC0fc08cc0967139C0545e73cA4587D);
     IMessenger private constant messenger = IMessenger(0x5D4472f31Bd9385709ec61305AFc749F0fA8e9d0);
-    address public constant dam = 0x6CF72C8F32b10872DEaC522c2e952F7AefD36d2F;
+    address public constant dam = 0x52B438b2FeE2AdeEf6d4146095ACE07772C1ED0A;
     uint32 public minGasLimitOnBlastBridge = 200000;
     uint256 private _totalSupply;
     uint256 private _numberOfStakeholders;
